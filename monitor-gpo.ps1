@@ -31,7 +31,7 @@ Import-Module ActiveDirectory,GroupPolicy
 #--------------------------------------------------------[Variables]--------------------------------------------------------
 $watchedOU = "DC=CORP,DC=CONTOSO,DC=COM"
 $SMTP = "relay.contoso.com"
-$alertRecipient = ""      # Leave empty to skip e-mail alerts
+$alertRecipient = "windows-admins@contoso.com"      # Leave empty to skip e-mail alerts
 $scriptPath = $PSScriptRoot                         # Change the default backup path if required
 $reportType = "HTML"                                # Valid options are HTML and XML
 $backupFolder = "$scriptPath\Backups\" + (get-date -Format "yyyy-MM-ddThhmmss")
@@ -55,6 +55,8 @@ $mailbody = @'
 # No user variables beyond this point
 $ErrorActionPreference = "SilentlyContinue"
 $GPCurrent = @()
+$GPLast = $null
+$reportbody = $null
 
 #--------------------------------------------------------[Functions]--------------------------------------------------------
 Function Backup ($GPO) 
@@ -62,15 +64,15 @@ Function Backup ($GPO)
         If ($GPO) {
             New-Item -Path $backupFolder -ItemType Directory;
             $GPO | Backup-GPO -Path $backupFolder;
-            $GPO | ForEach-Object {Get-GPOReport -Name $_.PolicyName -ReportType $reportType -Path "$backupFolder\"+$_.PolicyName+".$reportType"};
+            $GPO | ForEach-Object { Get-GPOReport -Name $_.PolicyName -ReportType $reportType -Path ("$backupFolder\"+$_.PolicyName+".$reportType") };
         }
     }
 
 Function DN2Canon ($OUPath)
     {
-        $Canon = $OUPath.Replace("DC=CORP,DC=CONTOSO,DC=COM","CORP.CONTOSO.COM").Replace("OU=","").Split(",")
+        $Canon = $OUPath -Replace("DC=CORP,DC=CONTOSO,DC=COM","CORP.CONTOSO.COM") -Replace("OU=","") -Split(",")
         [Array]::Reverse($Canon)
-        $Canon = $Canon -join "\"
+        $Canon = $Canon -Join "\"
         return($Canon)
     }
 
@@ -111,26 +113,25 @@ Else {
     # Check for changed GPOs
     $ChangedGPO = Compare-Object $GPLast $GPList -Property UpdateTime -PassThru | Where-Object {$_.SideIndicator -eq "=>"}
 
-    # If anything has changed then create a backup (of new and changed GPOs) and update the GPLast.xml list
+    # If anything has changed then create a backup (of new and changed GPOs), update GPLast.xml list and send -email
     If ($RemovedGPO -OR $NewGPO -OR $ChangedGPO) {
         $GPCurrent | Export-Clixml -Path "$scriptPath\GPLast.xml" -Force;
         Backup($NewGPO);
         Backup($ChangedGPO);
-    }
-
-    # If $alertRecipient is not empty, then generate and send a summary of changes via e-mail
-    If ($alertRecipient) {
-        # Generate HTML tables for the report
-        If ($NewGPO) { $reportbody += $NewGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Added</h3>" }
-        If ($ChangedGPO) { $reportbody += $ChangedGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Updated</h3>" }
-        If ($RemovedGPO) { $reportbody += $RemovedGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Removed</h3>" }
-
-        $mailbody = $mailbody.Replace("#mailcontent#",$reportbody)
-        $mailbody = $mailbody.Replace("PolicyName","Policy Name")
-        $mailbody = $mailbody.Replace("OU","Organizational Unit")
-        $mailbody = $mailbody.Replace("UpdateTime","Update Time")
-
-        Send-MailMessage -SmtpServer $SMTP -To $alertRecipient -From "donotreply@contoso.com" -Subject "Group Policy Monitor" -Body $mailbody -BodyAsHtml
-    }
     
+        # If $alertRecipient is not empty, then generate and send a summary of changes via e-mail
+        If ($alertRecipient) {
+            # Generate HTML tables for the report
+            If ($NewGPO) { $reportbody += $NewGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Added</h3>" }
+            If ($ChangedGPO) { $reportbody += $ChangedGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Updated</h3>" }
+            If ($RemovedGPO) { $reportbody += $RemovedGPO | ConvertTo-Html -Fragment -Property PolicyName,OU,UpdateTime -PreContent "<h3>Policies Removed</h3>" }
+
+            $mailbody = $mailbody.Replace("#mailcontent#",$reportbody)
+            $mailbody = $mailbody.Replace("PolicyName","Policy Name")
+            $mailbody = $mailbody.Replace("OU","Organizational Unit")
+            $mailbody = $mailbody.Replace("UpdateTime","Update Time")
+
+            Send-MailMessage -SmtpServer $SMTP -To $alertRecipient -From "donotreply@contoso.com" -Subject "Group Policy Monitor" -Body $mailbody -BodyAsHtml
+        }
+    }
 }
