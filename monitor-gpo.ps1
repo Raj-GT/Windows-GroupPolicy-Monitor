@@ -29,9 +29,12 @@
 Import-Module ActiveDirectory,GroupPolicy
 
 #--------------------------------------------------------[Variables]--------------------------------------------------------
-$watchedOU = "DC=CORP,DC=CONTOSO,DC=COM"
-$SMTP = "relay.contoso.com"
-$alertRecipient = "windows-admins@contoso.com"      # Leave empty to skip e-mail alerts
+$watchedOU = "DC=CORP,DC=CONTOSO,DC=COM"            # Root DN works as well
+$rootDN = "DC=CORP,DC=CONTOSO,DC=COM"               # Required for our quick and dirty DN2Canonical function
+$domainname = "CORP.CONTOSO.COM"                    # Required for our quick and dirty DN2Canonical function
+$SMTP = "relay.contoso.com"                         # Assumes port TCP/25. Add -Port to Send-MailMessage if different
+$mailFrom = "donotreply@contoso.com"                # From-address. For authenticated relays add -Credential to Send-MailMessage
+$alertRecipient = "windows-admins@contoso.com"      # To-address. Leave empty to skip e-mail alerts
 $scriptPath = $PSScriptRoot                         # Change the default backup path if required
 $reportType = "HTML"                                # Valid options are HTML and XML
 $backupFolder = "$scriptPath\Backups\" + (get-date -Format "yyyy-MM-ddThhmmss")
@@ -46,7 +49,7 @@ $mailbody = @'
     tr  { background: #E7FFF9; }
 </style>
 
-<p>GPO Monitor has detected the following changes under watched OU</p>
+<p>GPO Monitor has detected the following changes...</p>
 
 #mailcontent#
 
@@ -70,7 +73,7 @@ Function Backup ($GPO)
 
 Function DN2Canon ($OUPath)
     {
-        $Canon = $OUPath -Replace("DC=CORP,DC=CONTOSO,DC=COM","CORP.CONTOSO.COM") -Replace("OU=","") -Split(",")
+        $Canon = $OUPath -Replace($rootDN,$domainname) -Replace("OU=","") -Split(",")
         [Array]::Reverse($Canon)
         $Canon = $Canon -Join "\"
         return($Canon)
@@ -131,7 +134,7 @@ Else {
             $mailbody = $mailbody.Replace("OU","Organizational Unit")
             $mailbody = $mailbody.Replace("UpdateTime","Update Time")
 
-            Send-MailMessage -SmtpServer $SMTP -To $alertRecipient -From "donotreply@contoso.com" -Subject "Group Policy Monitor" -Body $mailbody -BodyAsHtml
+            Send-MailMessage -SmtpServer $SMTP -To $alertRecipient -From $mailFrom -Subject "Group Policy Monitor" -Body $mailbody -BodyAsHtml
         }
     }
 }
