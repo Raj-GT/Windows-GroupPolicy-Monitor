@@ -1,3 +1,19 @@
+<#PSScriptInfo
+
+.VERSION 1.3
+
+.GUID a9a9268e-acf3-4972-8c29-a7480f409e63
+
+.AUTHOR Nimal Raj
+
+.TAGS GroupPolicy,Automation
+
+.PROJECTURI https://github.com/Raj-GT/Windows-GroupPolicy-Monitor
+
+.EXTERNALMODULEDEPENDENCIES ActiveDirectory,GroupPolicy
+
+#>
+
 <#
 .SYNOPSIS
     Watch for Group Policy changes under monitored OU (and child OUs) and take automatic backups and optionally, alert via e-mail
@@ -20,10 +36,10 @@
     https://www.experts-exchange.com/articles/30751/Automating-Group-Policy-Backups.html
 
 .NOTES    
-    Version:    1.1
+    Version:    1.3
     Author:     Nimal Raj
     Revisions:  19/07/2017      Initial draft of v1.1
-
+                20/07/2017      Published in PowerShell Gallery
 #>
 
 #Requires -Version 3.0
