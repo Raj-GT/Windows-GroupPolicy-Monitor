@@ -3,7 +3,7 @@
     Watch for Group Policy changes under monitored OU (and child OUs) and take automatic backups and optionally, alert via e-mail
 
 .DESCRIPTION
-    When run (ideally on a recurring schedule via Task Scheduler) the script will check Group Policies linked under $watchedOU for changes and perform an automatic backup of just the changed policies. It will also generate individual HTML/XML reports of the changed policies and save it with the backups. You can also have a summary of changes sent to you via e-mail.
+    When run (ideally on a recurring schedule via Task Scheduler) the script will check Group Policies linked under $watchedOU for changes and perform an automatic backup of new and changed policies. It will also generate individual HTML/XML reports of the policies and save it with the backups with an option to send a summary of changes via e-mail.
 
     Each set of backup is created under it's own folder and kept indefinitely.
     
@@ -15,6 +15,9 @@
 
 .LINK
     https://github.com/Raj-GT/Windows-GroupPolicy-Monitor
+
+.LINK
+    https://www.experts-exchange.com/articles/30751/Automating-Group-Policy-Backups.html
 
 .NOTES    
     Version:    1.1
