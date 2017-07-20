@@ -5,4 +5,4 @@ When run (ideally on a recurring schedule via Task Scheduler) the script will ch
 
 Each set of backup is created under it's own folder and kept indefinitely.
 
-An article I wrote on an earlier version of these scripts is available at https://www.experts-exchange.com/articles/30751/Automating-Group-Policy-Backups.html
+An article I wrote on the script is available at https://www.experts-exchange.com/articles/30751/Automating-Group-Policy-Backups.html
