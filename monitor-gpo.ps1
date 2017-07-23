@@ -1,12 +1,12 @@
 <#PSScriptInfo
 
-.VERSION 1.3
+.VERSION 1.4
 
 .GUID a9a9268e-acf3-4972-8c29-a7480f409e63
 
 .AUTHOR Nimal Raj
 
-.TAGS GroupPolicy,Automation
+.TAGS GroupPolicy,Automation,GPO,Backup
 
 .PROJECTURI https://github.com/Raj-GT/Windows-GroupPolicy-Monitor
 
@@ -31,15 +31,14 @@
 
 .LINK
     https://github.com/Raj-GT/Windows-GroupPolicy-Monitor
-
-.LINK
     https://www.experts-exchange.com/articles/30751/Automating-Group-Policy-Backups.html
 
 .NOTES    
-    Version:    1.3
+    Version:    1.4
     Author:     Nimal Raj
-    Revisions:  19/07/2017      Initial draft of v1.1
-                20/07/2017      Published in PowerShell Gallery
+    Revisions:  19/07/2017      Initial draft (1.1)
+                20/07/2017      Published in PowerShell Gallery (1.3)
+                22/07/2017      Bug fix to enable backup of domain root policies (1.4)
 #>
 
 #Requires -Version 3.0
@@ -48,7 +47,7 @@
 Import-Module ActiveDirectory,GroupPolicy
 
 #--------------------------------------------------------[Variables]--------------------------------------------------------
-$watchedOU = "DC=CORP,DC=CONTOSO,DC=COM"            # Root DN works as well
+$watchedOU = "DC=CORP,DC=CONTOSO,DC=COM"            # Domain Root works as well
 $rootDN = "DC=CORP,DC=CONTOSO,DC=COM"               # Required for our quick and dirty DN2Canonical function
 $domainname = "CORP.CONTOSO.COM"                    # Required for our quick and dirty DN2Canonical function
 $SMTP = "relay.contoso.com"                         # Assumes port TCP/25. Add -Port to Send-MailMessage if different
@@ -101,6 +100,11 @@ Function DN2Canon ($OUPath)
 #--------------------------------------------------------[Execution]--------------------------------------------------------
 # Generate list of GPOs linked under $watchedOU
 $GPOLinks = (Get-ADOrganizationalUnit -SearchBase $watchedOU -Filter 'gpLink -gt "*"' | Get-GPInheritance).gpolinks
+
+# Grab policies linked at domain root (in case $watchedOU is domain root)
+If ($watchedOU.StartsWith("DC=")) {
+    $GPOLinks += (Get-ADDomain | Get-GPInheritance).gpolinks
+}
 
 ForEach ($GPO in $GPOLinks) {
     $GPCurrent += New-Object -TypeName PSCustomObject -Property @{
